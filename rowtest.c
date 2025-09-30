@@ -6,7 +6,7 @@
 
 #define REPEAT 1000000
 #define CACHELINE 64
-#define ROW_SIZE (8*1024)   // row size = 32KB
+#define ROW_SIZE (4*1024)   // row size = 32KB
 
 inline void clflush(volatile void *p) {
     _mm_clflush(p);
