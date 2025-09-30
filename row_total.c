@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#define REPEAT 500000
-#define ROW_STRIDE (32*1024)   // row size = 8kB
+#define REPEAT 100000
+#define ROW_STRIDE (32*1024)   // row size = 32kB
 #define ALIGN     (64*1024)   // avoid physical mapping jitter
 
 static inline void clflush_line(volatile void *p) {
@@ -54,7 +54,7 @@ int main(void) {
 
     volatile unsigned long sink = 0; // avoid improvement
     char *addr1      = buf;
-    char *addr2_same = buf + 64;            // same ror
+    char *addr2_same = buf + 64;            // same row
     char *addr2_diff = buf + ROW_STRIDE;    // different row
 
     // warm-up (TLB + page reside)
