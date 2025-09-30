@@ -4,9 +4,9 @@
 #include <string.h>
 #include <x86intrin.h>   // for __rdtscp, _mm_clflush
 
-#define REPEAT 1000000
+#define REPEAT 1
 #define CACHELINE 64
-#define ROW_SIZE (4*1024)   // row size = 32KB
+#define ROW_SIZE (32*1024)   // row size = 32KB
 
 inline void clflush(volatile void *p) {
     _mm_clflush(p);
