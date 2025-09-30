@@ -2,128 +2,111 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <x86intrin.h>   // for __rdtscp, _mm_clflush
+#include <sys/mman.h>
 
 #define REPEAT 100
-#define CACHELINE 64
-#define ROW_SIZE (32*1024)   // row size = 32KB
+#define BUFFER_SIZE (64 * 1024 * 1024) // 64MB to ensure we're accessing DRAM
+#define STRIDE_SIZE (8 * 1024) // 8KB stride, typical DRAM row size
 
 inline void clflush(volatile void *p) {
-    _mm_clflush(p);
-}
-
-inline void mfence() {
-    _mm_mfence();
+    asm volatile ("clflush (%0)" :: "r"(p));
 }
 
 inline uint64_t rdtsc() {
-    unsigned int aux;
-    return __rdtscp(&aux);
+    unsigned long a, d;
+    asm volatile ("rdtsc" : "=a" (a), "=d" (d));
+    return a | ((uint64_t)d << 32);
 }
 
-// Function to access entire cache line to ensure it's brought into cache
-void access_memory(volatile char *addr) {
-    *addr = *addr;  // Simple read to trigger memory access
+inline void memory(void *dst, void *src, size_t n) {
+    memcpy(dst, src, n);
 }
 
-void rowtest() {
-    char *buf;
-    // Allocate 4 rows to ensure we have different rows
-    if (posix_memalign((void**)&buf, ROW_SIZE, ROW_SIZE * 4)) {
-        perror("posix_memalign");
-        exit(1);
+void test_open_vs_closed_row() {
+    // Allocate large buffers to ensure we're working in DRAM
+    char* buffer1 = (char*) mmap(NULL, BUFFER_SIZE, PROT_READ | PROT_WRITE, 
+                                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    char* buffer2 = (char*) mmap(NULL, BUFFER_SIZE, PROT_READ | PROT_WRITE, 
+                                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    
+    if (buffer1 == MAP_FAILED || buffer2 == MAP_FAILED) {
+        printf("Memory allocation failed\n");
+        return;
     }
-
-    // Initialize memory to prevent optimization
-    memset(buf, 0, ROW_SIZE * 4);
-
-    // Addresses for testing
-    volatile char *base_addr = buf;
-    volatile char *same_row_addr = buf + CACHELINE;  // Same row, different cache line
-    volatile char *diff_row_addr = buf + ROW_SIZE;   // Different row
     
-    uint64_t sum_first_same = 0, sum_second_same = 0;
-    uint64_t sum_first_diff = 0, sum_second_diff = 0;
-
-    printf("Testing row buffer policy...\n");
-    printf("Base address: %p\n", base_addr);
-    printf("Same row address: %p\n", same_row_addr);
-    printf("Different row address: %p\n", diff_row_addr);
-
-    for (int r = 0; r < REPEAT; r++) {
-        // ==== SAME ROW CASE ====
-        // Flush all relevant addresses from cache
-        clflush(base_addr);
-        clflush(same_row_addr);
-        mfence();
-        
-        // First access - should open the row
-        uint64_t t0 = rdtsc();
-        access_memory(base_addr);
-        mfence();
-        uint64_t t1 = rdtsc();
-        sum_first_same += (t1 - t0);
-
-        // Second access to same row - should be fast if row remains open
-        t0 = rdtsc();
-        access_memory(same_row_addr);
-        mfence();
-        t1 = rdtsc();
-        sum_second_same += (t1 - t0);
-
-        // ==== DIFFERENT ROW CASE ====
-        // Flush all relevant addresses
-        clflush(base_addr);
-        clflush(diff_row_addr);
-        mfence();
-        
-        // First access - opens first row
-        t0 = rdtsc();
-        access_memory(base_addr);
-        mfence();
-        t1 = rdtsc();
-        sum_first_diff += (t1 - t0);
-
-        // Second access to different row - may require row closure and new row opening
-        t0 = rdtsc();
-        access_memory(diff_row_addr);
-        mfence();
-        t1 = rdtsc();
-        sum_second_diff += (t1 - t0);
+    // Initialize buffers
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        buffer1[i] = (char)(i % 256);
+        buffer2[i] = 0;
     }
-
-    printf("\n=== Results (averaged over %d runs) ===\n", REPEAT);
-    printf("Same-row case:\n");
-    printf("  First access:  %lu cycles\n", sum_first_same / REPEAT);
-    printf("  Second access: %lu cycles\n", sum_second_same / REPEAT);
-    printf("  Speedup: %.2fx\n", (double)sum_first_same / sum_second_same);
     
-    printf("Different-row case:\n");
-    printf("  First access:  %lu cycles\n", sum_first_diff / REPEAT);
-    printf("  Second access: %lu cycles\n", sum_second_diff / REPEAT);
-    printf("  Speedup: %.2fx\n", (double)sum_first_diff / sum_second_diff);
+    uint64_t start, end;
+    uint64_t time_first_access, time_second_access;
     
-    // Determine policy
-    printf("\n=== Row Buffer Policy Analysis ===\n");
-    double same_row_speedup = (double)sum_first_same / sum_second_same;
-    double diff_row_speedup = (double)sum_first_diff / sum_second_diff;
+    // Test 1: Access same row twice (sequential access pattern)
+    printf("Testing same row access (open-row policy should be faster):\n");
     
-    if (same_row_speedup > 1.5 && diff_row_speedup < 1.2) {
-        printf("CONCLUSION: OPEN-ROW policy detected\n");
-        printf("  - Same-row accesses show significant speedup (row remains open)\n");
-        printf("  - Different-row accesses show little speedup (row conflict)\n");
-    } else if (same_row_speedup > 1.2 && diff_row_speedup > 1.2) {
-        printf("CONCLUSION: CLOSED-ROW policy detected\n");
-        printf("  - Both same-row and different-row accesses show speedup\n");
+    volatile char *addr1 = buffer1;
+    volatile char *addr2 = buffer1 + STRIDE_SIZE; // Different row
+    
+    // First access to a row
+    start = rdtsc();
+    *addr1 = 'A';
+    end = rdtsc();
+    time_first_access = end - start;
+    printf("First access to row: %llu ticks\n", time_first_access);
+    
+    // Flush from cache to force DRAM access
+    clflush(addr1);
+    
+    // Second access to same row (should be faster if open-row)
+    start = rdtsc();
+    *addr1 = 'B';
+    end = rdtsc();
+    time_second_access = end - start;
+    printf("Second access to same row: %llu ticks\n", time_second_access);
+    
+    printf("Same row speedup: %.2fx\n", (double)time_first_access/time_second_access);
+    
+    // Test 2: Access different rows
+    printf("\nTesting different row access:\n");
+    
+    // First access to row 1
+    start = rdtsc();
+    *addr1 = 'C';
+    end = rdtsc();
+    time_first_access = end - start;
+    printf("First access to row 1: %llu ticks\n", time_first_access);
+    
+    // Flush both addresses
+    clflush(addr1);
+    clflush(addr2);
+    
+    // Access to different row (should be similar to first access if closed-row)
+    start = rdtsc();
+    *addr2 = 'D';
+    end = rdtsc();
+    time_second_access = end - start;
+    printf("Access to different row: %llu ticks\n", time_second_access);
+    
+    printf("Different row ratio: %.2fx\n", (double)time_second_access/time_first_access);
+    
+    // Clean up
+    munmap(buffer1, BUFFER_SIZE);
+    munmap(buffer2, BUFFER_SIZE);
+    
+    // Interpretation
+    printf("\n=== Result Analysis ===\n");
+    if ((double)time_first_access/time_second_access > 1.5) {
+        printf("DRAM appears to use OPEN-ROW policy (same row access is significantly faster)\n");
     } else {
-        printf("CONCLUSION: Inconclusive - may need more runs or different parameters\n");
+        printf("DRAM appears to use CLOSED-ROW policy (same row access is not much faster)\n");
     }
-
-    free(buf);
 }
 
-int main() {
-    printf("===== DRAM Row Buffer Policy Test =====\n");
-    rowtest();
+int main(int ac, char **av) {
+    printf("Testing DRAM Row Buffer Policy\n");
+    printf("==============================\n");
+    test_open_vs_closed_row();
     return 0;
 }
