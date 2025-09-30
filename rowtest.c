@@ -19,10 +19,10 @@ inline uint64_t rdtsc() {
     return __rdtscp(&aux);
 }
 
-// 测试一次 same-row vs diff-row
+//one test same-row vs diff-row
 void rowtest() {
     char *buf;
-    if (posix_memalign((void**)&buf, ROW_SIZE, ROW_SIZE*2*1024)) {
+    if (posix_memalign((void**)&buf, ROW_SIZE, ROW_SIZE*4*1024)) {
         perror("posix_memalign");
         exit(1);
     }
@@ -45,7 +45,7 @@ void rowtest() {
         uint64_t t1 = rdtsc();
         sum_first_same += (t1 - t0);
 
-        clflush(addr2_same);
+        // clflush(addr2_same);
         t0 = rdtsc();
         tmp = *addr2_same;
         t1 = rdtsc();
@@ -60,7 +60,7 @@ void rowtest() {
         t1 = rdtsc();
         sum_first_diff += (t1 - t0);
 
-        clflush(addr2_diff);
+        //clflush(addr2_diff);
         t0 = rdtsc();
         tmp = *addr2_diff;
         t1 = rdtsc();
