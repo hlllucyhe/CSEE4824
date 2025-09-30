@@ -22,7 +22,7 @@ inline uint64_t rdtsc() {
 // 测试一次 same-row vs diff-row
 void rowtest() {
     char *buf;
-    if (posix_memalign((void**)&buf, ROW_SIZE, ROW_SIZE*2)) {
+    if (posix_memalign((void**)&buf, ROW_SIZE, ROW_SIZE*2*1024)) {
         perror("posix_memalign");
         exit(1);
     }
