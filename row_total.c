@@ -4,7 +4,7 @@
 #include <x86intrin.h>   // for __rdtscp, _mm_clflush
 
 #define REPEAT 1000000
-#define ROW_SIZE (32*1024)   // row size = 8 kB
+#define ROW_SIZE (8*1024)   // row size = 8 kB
 
 inline void clflush(volatile void *p) {
     _mm_clflush(p);
