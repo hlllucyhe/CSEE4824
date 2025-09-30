@@ -44,7 +44,7 @@ void test_open_vs_closed_row() {
     uint64_t time_first_access, time_second_access;
     
     // Test 1: Access same row twice (sequential access pattern)
-    printf("Testing same row access (open-row policy should be faster):\n");
+    printf("Testing same row access:\n");
     
     volatile char *addr1 = buffer1;
     volatile char *addr2 = buffer1 + STRIDE_SIZE; // Different row
@@ -66,7 +66,6 @@ void test_open_vs_closed_row() {
     time_second_access = end - start;
     printf("Second access to same row: %llu ticks\n", time_second_access);
     
-    printf("Same row speedup: %.2fx\n", (double)time_first_access/time_second_access);
     
     // Test 2: Access different rows
     printf("\nTesting different row access:\n");
@@ -88,8 +87,6 @@ void test_open_vs_closed_row() {
     end = rdtsc();
     time_second_access = end - start;
     printf("Access to different row: %llu ticks\n", time_second_access);
-    
-    printf("Different row ratio: %.2fx\n", (double)time_second_access/time_first_access);
     
     // Clean up
     munmap(buffer1, BUFFER_SIZE);
