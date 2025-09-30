@@ -7,7 +7,7 @@
 #include <sys/mman.h>
 
 #define REPEAT 500000
-#define ROW_STRIDE (8*1024)   // row size = 8kB
+#define ROW_STRIDE (32*1024)   // row size = 8kB
 #define ALIGN     (64*1024)   // avoid physical mapping jitter
 
 static inline void clflush_line(volatile void *p) {
