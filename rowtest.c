@@ -1,35 +1,30 @@
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <x86intrin.h>
+#include <string.h>
+#include <x86intrin.h>   // for __rdtscp, _mm_clflush
 
+#define REPEAT 1000000
 #define CACHELINE 64
-#define ROW_SIZE  (8*1024)   // row buffer = 8KB
-#define REPEAT    100        // repeat
+#define ROW_SIZE (32*1024)   // row size = 32KB
 
-static inline void clflush(void *p) {
+inline void clflush(volatile void *p) {
     _mm_clflush(p);
     _mm_mfence();
 }
 
-static inline uint64_t tsc_begin(void) {
+inline uint64_t rdtsc() {
     unsigned int aux;
     _mm_lfence();
     return __rdtscp(&aux);
 }
 
-static inline uint64_t tsc_end(void) {
-    unsigned int aux;
-    uint64_t t = __rdtscp(&aux);
-    _mm_lfence();
-    return t;
-}
-
-int main(void) {
+// 测试一次 same-row vs diff-row
+void rowtest() {
     char *buf;
     if (posix_memalign((void**)&buf, ROW_SIZE, ROW_SIZE*2)) {
         perror("posix_memalign");
-        return 1;
+        exit(1);
     }
 
     volatile char tmp;
@@ -45,30 +40,30 @@ int main(void) {
         clflush(addr1);
         clflush(addr2_same);
 
-        uint64_t t0 = tsc_begin();
+        uint64_t t0 = rdtsc();
         tmp = *addr1;
-        uint64_t t1 = tsc_end();
+        uint64_t t1 = rdtsc();
         sum_first_same += (t1 - t0);
 
-        clflush(addr2_same); // avoid effect of cache 
-        t0 = tsc_begin();
+        clflush(addr2_same);
+        t0 = rdtsc();
         tmp = *addr2_same;
-        t1 = tsc_end();
+        t1 = rdtsc();
         sum_second_same += (t1 - t0);
 
         // ---- diff row case ----
         clflush(addr1);
         clflush(addr2_diff);
 
-        t0 = tsc_begin();
+        t0 = rdtsc();
         tmp = *addr1;
-        t1 = tsc_end();
+        t1 = rdtsc();
         sum_first_diff += (t1 - t0);
 
-        clflush(addr2_diff); // avoid cache effect
-        t0 = tsc_begin();
+        clflush(addr2_diff);
+        t0 = rdtsc();
         tmp = *addr2_diff;
-        t1 = tsc_end();
+        t1 = rdtsc();
         sum_second_diff += (t1 - t0);
     }
 
@@ -79,5 +74,10 @@ int main(void) {
     printf("Diff-row Second access:  %lu cycles\n", sum_second_diff / REPEAT);
 
     free(buf);
+}
+
+int main() {
+    printf("===== Row Buffer Policy Test =====\n");
+    rowtest();
     return 0;
 }
