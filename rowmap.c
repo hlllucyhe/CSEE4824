@@ -55,6 +55,8 @@ void test_open_vs_closed_row() {
         *addr1 = 'C';
         end = rdtsc();
         clock1 += (end - start);
+        printf("First access to row1: %llu ticks\n", clock1);
+
         
         clflush(addr1);
         clflush(addr2);
@@ -63,6 +65,8 @@ void test_open_vs_closed_row() {
         *addr2 = 'D';
         end = rdtsc();
         clock2 += (end - start);
+        printf("First access to row2: %llu ticks\n", clock2);
+
 
         clflush(addr1);
         clflush(addr2);
@@ -71,20 +75,25 @@ void test_open_vs_closed_row() {
         *addr2 = 'D';
         end = rdtsc();
         clock3 += (end - start);
+        printf("First access to row2: %llu ticks\n", clock3);
 
-        // Clean up
-        munmap(buffer1, BUFFER_SIZE);
-        munmap(buffer2, BUFFER_SIZE);
+
     }
 
+    /*
     // 输出平均值
     printf("===== Row Buffer Policy Test =====\n");
     printf("Avg access row1: %" PRIu64 " cycles\n", clock1 / REPEAT);
     printf("Avg access row2 (first): %" PRIu64 " cycles\n", clock2 / REPEAT);
-    printf("Avg access row2 (second): %" PRIu64 " cycles\n", clock3 / REPEAT);
+    printf("Avg access row2 (second): %" PRIu64 " cycles\n", clock3 / REPEAT);*/
 
+   // Clean up
+    munmap(buffer1, BUFFER_SIZE);
+    munmap(buffer2, BUFFER_SIZE);
 
 }
+
+
 
 int main(int ac, char **av) {
     printf("Testing DRAM Row Buffer Policy\n");
