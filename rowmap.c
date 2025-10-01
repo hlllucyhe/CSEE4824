@@ -71,6 +71,10 @@ void test_open_vs_closed_row() {
         *addr2 = 'D';
         end = rdtsc();
         clock3 += (end - start);
+
+        // Clean up
+        munmap(buffer1, BUFFER_SIZE);
+        munmap(buffer2, BUFFER_SIZE);
     }
 
     // 输出平均值
@@ -79,9 +83,7 @@ void test_open_vs_closed_row() {
     printf("Avg access row2 (first): %" PRIu64 " cycles\n", clock2 / REPEAT);
     printf("Avg access row2 (second): %" PRIu64 " cycles\n", clock3 / REPEAT);
 
-    // Clean up
-    munmap(buffer1, BUFFER_SIZE);
-    munmap(buffer2, BUFFER_SIZE);
+
 }
 
 int main(int ac, char **av) {
