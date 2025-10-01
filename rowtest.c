@@ -17,7 +17,7 @@ inline uint64_t rdtsc() {
 
 long int rep;
 
-inline void rowtest() {
+void rowtest() {
     uint64_t start, end;
     uint64_t clock1 = 0, clock2 = 0, clock3 = 0;
 
