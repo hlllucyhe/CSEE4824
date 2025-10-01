@@ -3,10 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <inttypes.h>
 
 #define REPEAT 100
 #define BUFFER_SIZE (64 * 1024 * 1024) // 64MB to ensure we're accessing DRAM
-#define STRIDE_SIZE (8 * 1024) // 8KB stride, typical DRAM row size
+#define STRIDE_SIZE (8 * 1024)         // 8KB stride, typical DRAM row size
 
 inline void clflush(volatile void *p) {
     asm volatile ("clflush (%0)" :: "r"(p));
@@ -18,9 +19,7 @@ inline uint64_t rdtsc() {
     return a | ((uint64_t)d << 32);
 }
 
-inline void memory(void *dst, void *src, size_t n) {
-    memcpy(dst, src, n);
-}
+long int rep;
 
 void test_open_vs_closed_row() {
     // Allocate large buffers to ensure we're working in DRAM
@@ -41,51 +40,50 @@ void test_open_vs_closed_row() {
     }
     
     uint64_t start, end;
-    uint64_t time_first_access, time_second_access;
+    uint64_t clock1 = 0, clock2 = 0, clock3 = 0; 
     
     volatile char *addr1 = buffer1;
     volatile char *addr2 = buffer1 + STRIDE_SIZE; // Different row
     
+    for (rep = 0; rep < REPEAT; rep++) {
+        // Flush both addresses
+        clflush(addr1);
+        clflush(addr2);
 
-    // Flush both addresses
-    clflush(addr1);
-    clflush(addr2);
+        // First access to row 1
+        start = rdtsc();
+        *addr1 = 'C';
+        end = rdtsc();
+        clock1 += (end - start);
+        
+        // Access to different row2
+        start = rdtsc();
+        *addr2 = 'D';
+        end = rdtsc();
+        clock2 += (end - start);
 
-    // First access to row 1
-    start = rdtsc();
-    *addr1 = 'C';
-    end = rdtsc();
-    time_first_access = end - start;
-    printf("First access to row 1: %llu ticks\n", time_first_access);
-    
-    clflush(addr1);
-    clflush(addr2);
-    // Access to different row2
-    start = rdtsc();
-    *addr2 = 'D';
-    end = rdtsc();
-    time_second_access = end - start;
-    printf("First access to row2: %llu ticks\n", time_second_access);
+        // Access to same row2 (again)
+        start = rdtsc();
+        *addr2 = 'C';
+        end = rdtsc();
+        clock3 += (end - start);
+    }
 
-    clflush(addr1);
-    clflush(addr2);
-    // Access to same row2
-    start = rdtsc();
-    *addr2 = 'C';
-    end = rdtsc();
-    time_second_access = end - start;
-    printf("Second access to row2: %llu ticks\n", time_second_access);
+    // 输出平均值
+    printf("===== Row Buffer Policy Test =====\n");
+    printf("Avg access row1: %" PRIu64 " cycles\n", clock1 / REPEAT);
+    printf("Avg access row2 (first): %" PRIu64 " cycles\n", clock2 / REPEAT);
+    printf("Avg access row2 (second): %" PRIu64 " cycles\n", clock3 / REPEAT);
 
     // Clean up
     munmap(buffer1, BUFFER_SIZE);
     munmap(buffer2, BUFFER_SIZE);
-    
 }
 
 int main(int ac, char **av) {
     printf("Testing DRAM Row Buffer Policy\n");
     printf("==============================\n");
+    
     test_open_vs_closed_row();
     return 0;
 }
-
