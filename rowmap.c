@@ -4,13 +4,22 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <inttypes.h>
+#include <x86intrin.h>  
 
 #define REPEAT 10
 #define BUFFER_SIZE (64 * 1024 * 1024) // 64MB to ensure we're accessing DRAM
 #define STRIDE_SIZE (8 * 1024)         // 8KB stride, typical DRAM row size
 
-inline void clflush(volatile void *p) {
-    asm volatile ("clflush (%0)" :: "r"(p));
+#define CACHELINE 64
+
+static inline void clflush_range(void *p, size_t len) {
+    uintptr_t addr = (uintptr_t)p;
+    uintptr_t end  = addr + len;
+
+    for (; addr < end; addr += CACHELINE) {
+        _mm_clflush((void*)addr);
+    }
+    _mm_mfence();  
 }
 
 inline uint64_t rdtsc() {
@@ -47,8 +56,8 @@ void test_open_vs_closed_row() {
     
     for (rep = 0; rep < REPEAT; rep++) {
         // Flush both addresses
-        clflush(addr1);
-        clflush(addr2);
+        clflush_range(buffer1, BUFFER_SIZE);
+        clflush_range(buffer2, BUFFER_SIZE);
 
         // First access to row 1
         start = rdtsc();
@@ -58,8 +67,8 @@ void test_open_vs_closed_row() {
         printf("First access to row1: %llu ticks\n", clock1);
 
         
-        clflush(addr1);
-        clflush(addr2);
+        clflush_range(buffer1, BUFFER_SIZE);
+        clflush_range(buffer2, BUFFER_SIZE);
         // Access to different row2
         start = rdtsc();
         *addr2 = 'D';
@@ -68,8 +77,8 @@ void test_open_vs_closed_row() {
         printf("First access to row2: %llu ticks\n", clock2);
 
 
-        clflush(addr1);
-        clflush(addr2);
+        clflush_range(buffer1, BUFFER_SIZE);
+        clflush_range(buffer2, BUFFER_SIZE);
         // Access to same row2 (again)
         start = rdtsc();
         *addr2 = 'D';
