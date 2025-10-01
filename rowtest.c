@@ -73,10 +73,10 @@ void test_open_vs_closed_row() {
     clflush(addr2);
     // Access to same row2
     start = rdtsc();
-    *addr2 = 'C';
+    *addr2 = 'D';
     end = rdtsc();
     time_third_access = end - start;
-    printf("Second access to row2: %llu ticks\n", time_second_access);
+    printf("Second access to row2: %llu ticks\n", time_third_access);
 
     // Clean up
     munmap(buffer1, BUFFER_SIZE);
