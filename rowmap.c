@@ -65,14 +65,14 @@ void test_open_vs_closed_row() {
     *addr2 = 'D';
     end = rdtsc();
     time_second_access = end - start;
-    printf("Access to different row: %llu ticks\n", time_second_access);
+    printf("First access to row2: %llu ticks\n", time_second_access);
 
     // Access to same row2
     start = rdtsc();
     *addr2 = 'C';
     end = rdtsc();
     time_second_access = end - start;
-    printf("Access to second row (same as previous): %llu ticks\n", time_second_access);
+    printf("Second access to row2: %llu ticks\n", time_second_access);
 
     // Clean up
     munmap(buffer1, BUFFER_SIZE);
