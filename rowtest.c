@@ -48,7 +48,6 @@ void test_open_vs_closed_row() {
     volatile char *addr1 = buffer1;
     volatile char *addr2 = buffer1 + STRIDE_SIZE; // Different row
     
-    for (rep = 0; rep < REPEAT; rep++) {
     // Flush both addresses
     clflush(addr1);
     clflush(addr2);
@@ -83,7 +82,6 @@ void test_open_vs_closed_row() {
     munmap(buffer2, BUFFER_SIZE);
     }
     
-}
 
 int main(int ac, char **av) {
     printf("Testing DRAM Row Buffer Policy\n");
