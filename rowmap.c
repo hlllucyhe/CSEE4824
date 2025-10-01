@@ -56,12 +56,16 @@ void test_open_vs_closed_row() {
         end = rdtsc();
         clock1 += (end - start);
         
+        clflush(addr1);
+        clflush(addr2);
         // Access to different row2
         start = rdtsc();
         *addr2 = 'D';
         end = rdtsc();
         clock2 += (end - start);
 
+        clflush(addr1);
+        clflush(addr2);
         // Access to same row2 (again)
         start = rdtsc();
         *addr2 = 'C';
