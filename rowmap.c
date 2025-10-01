@@ -75,7 +75,7 @@ void test_open_vs_closed_row() {
         *addr2 = 'D';
         end = rdtsc();
         clock3 += (end - start);
-        printf("First access to row2: %llu ticks\n", clock3);
+        printf("Second access to row2: %llu ticks\n", clock3);
 
 
     }
