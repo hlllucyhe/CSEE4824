@@ -49,6 +49,10 @@ void test_open_vs_closed_row() {
     
     printf("\nTesting different row access:\n");
     
+    // Flush both addresses
+    clflush(addr1);
+    clflush(addr2);
+
     // First access to row 1
     start = rdtsc();
     *addr1 = 'C';
@@ -56,9 +60,6 @@ void test_open_vs_closed_row() {
     time_first_access = end - start;
     printf("First access to row 1: %llu ticks\n", time_first_access);
     
-    // Flush both addresses
-    clflush(addr1);
-    clflush(addr2);
     
     // Access to different row2
     start = rdtsc();
