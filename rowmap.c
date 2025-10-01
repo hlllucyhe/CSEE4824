@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #include <inttypes.h>
 
-#define REPEAT 100
+#define REPEAT 10
 #define BUFFER_SIZE (64 * 1024 * 1024) // 64MB to ensure we're accessing DRAM
 #define STRIDE_SIZE (8 * 1024)         // 8KB stride, typical DRAM row size
 
