@@ -46,8 +46,6 @@ void test_open_vs_closed_row() {
     volatile char *addr1 = buffer1;
     volatile char *addr2 = buffer1 + STRIDE_SIZE; // Different row
     
-    
-    printf("\nTesting different row access:\n");
 
     // Flush both addresses
     clflush(addr1);
