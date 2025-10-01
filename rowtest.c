@@ -46,7 +46,7 @@ void rowtest() {
 
         // Step3: repeat access row2 (same row)
         start = rdtsc();
-        tmp = row2[64]; 
+        tmp = row2[0]; 
         end = rdtsc();
         clock3 += (end - start);
 
