@@ -43,32 +43,10 @@ void test_open_vs_closed_row() {
     uint64_t start, end;
     uint64_t time_first_access, time_second_access;
     
-    /* Test 1: Access same row twice (sequential access pattern)
-    printf("Testing same row access (open-row policy should be faster):\n");*/
-    
     volatile char *addr1 = buffer1;
     volatile char *addr2 = buffer1 + STRIDE_SIZE; // Different row
     
-    /*
-    // First access to a row
-    start = rdtsc();
-    *addr1 = 'A';
-    end = rdtsc();
-    time_first_access = end - start;
-    printf("First access to row: %llu ticks\n", time_first_access);
     
-    // Flush from cache to force DRAM access
-    clflush(addr1);
-    
-    // Second access to same row (should be faster if open-row)
-    start = rdtsc();
-    *addr1 = 'B';
-    end = rdtsc();
-    time_second_access = end - start;
-    printf("Second access to same row: %llu ticks\n", time_second_access);*/
-    
-    
-    // Test 2: Access different rows
     printf("\nTesting different row access:\n");
     
     // First access to row 1
@@ -82,14 +60,14 @@ void test_open_vs_closed_row() {
     clflush(addr1);
     clflush(addr2);
     
-    // Access to different row (should be similar to first access if closed-row)
+    // Access to different row2
     start = rdtsc();
     *addr2 = 'D';
     end = rdtsc();
     time_second_access = end - start;
     printf("Access to different row: %llu ticks\n", time_second_access);
 
-    // Access to different row (should be similar to first access if closed-row)
+    // Access to same row2
     start = rdtsc();
     *addr2 = 'C';
     end = rdtsc();
@@ -100,13 +78,6 @@ void test_open_vs_closed_row() {
     munmap(buffer1, BUFFER_SIZE);
     munmap(buffer2, BUFFER_SIZE);
     
-    // Interpretation
-    printf("\n=== Result Analysis ===\n");
-    if ((double)time_first_access/time_second_access > 1.5) {
-        printf("DRAM appears to use OPEN-ROW policy (same row access is significantly faster)\n");
-    } else {
-        printf("DRAM appears to use CLOSED-ROW policy (same row access is not much faster)\n");
-    }
 }
 
 int main(int ac, char **av) {
