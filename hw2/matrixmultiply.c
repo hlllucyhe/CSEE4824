@@ -34,8 +34,8 @@ int main()
     clock_gettime(CLOCK_REALTIME, &start);
     multMat(mat1, mat2);
     clock_gettime(CLOCK_REALTIME, &end);
-    time_spent = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1000000.0;
-    printf("Elapsed time in miliseconds: %f \n", time_spent);
+    time_spent = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1000000000.0;
+    printf("Elapsed time in seconds: %f \n", time_spent);
 
     return 0;
 }
