@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define n 256 //dimension of square matrices.
+#define n 1024 //dimension of square matrices.
 
 void printMat(int matA[n][n]);
 void multMat(int matA[n][n], int matB[n][n]);
