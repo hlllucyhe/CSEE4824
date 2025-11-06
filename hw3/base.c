@@ -1,6 +1,8 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define MAX_DIGITS 2048  // max digits for each number 1024
 #define BASE 10          // base of each bit 10
@@ -60,8 +62,15 @@ int main() {
     //convert string to arrays
     int lenA = stringToBigInt(strA, A);
     int lenB = stringToBigInt(strB, B);
+    
+    struct timespec start, end;
+    double time_spent;
 
+    clock_gettime(CLOCK_MONOTONIC, &start);
     multiplyBigInt(A, lenA, B, lenB, C);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_spent = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1000000.0;
+    printf("Elapsed time in miliseconds: %f \n", time_spent);
 
     printf("Result = ");
     printBigInt(C, lenA + lenB);
