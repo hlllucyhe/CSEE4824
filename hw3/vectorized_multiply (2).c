@@ -23,6 +23,7 @@ void printBigInt(uint32_t* num, int len) {
     printf("\n");
 }
 
+// 向量化版本
 void multiply_vectorized(uint32_t* A, size_t lenA, uint32_t* B, size_t lenB, uint32_t* C) {
     memset(C, 0, (lenA + lenB) * sizeof(uint32_t));
 
@@ -40,12 +41,14 @@ void multiply_vectorized(uint32_t* A, size_t lenA, uint32_t* B, size_t lenB, uin
                 _mm256_storeu_si256((__m256i*) & C[i + j], sum);
             }
             else {
+                // 处理尾部不足8个元素的情况
                 for (size_t k = j; k < lenB; k++) {
                     C[i + k] += A[i] * B[k];
                 }
             }
         }
 
+        // 统一处理进位（标量方式）
         for (size_t k = 0; k < lenA + lenB - 1; k++) {
             if (C[k] >= BASE) {
                 C[k + 1] += C[k] / BASE;
@@ -72,6 +75,7 @@ int main() {
     int lenA = stringToBigInt(strA, A);
     int lenB = stringToBigInt(strB, B);
 
+    // 性能测试
     struct timespec start, end;
     double time_vectorized;
 
