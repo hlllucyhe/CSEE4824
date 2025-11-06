@@ -101,7 +101,7 @@ int main() {
     double time_vectorized;
 
     clock_gettime(CLOCK_MONOTONIC, &start);
-    multiply_baseline(A, lenA, B, lenB, C_base);
+    multiplyBigInt(A, lenA, B, lenB, C_base);
     clock_gettime(CLOCK_MONOTONIC, &end);
     time_base = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
 
