@@ -101,16 +101,19 @@ int main() {
     double time_vectorized;
 
     clock_gettime(CLOCK_MONOTONIC, &start);
-    multiplyBigInt(A, lenA, B, lenB, C_base);
-    multiply_vectorized(A, lenA, B, lenB, C_vec);
+    multiply_baseline(A, lenA, B, lenB, C_base);
     clock_gettime(CLOCK_MONOTONIC, &end);
-
     time_base = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
-    time_vectorized = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
 
     printf("Baseline Result = ");
     printBigInt(C_base, lenA + lenB);
     printf("Baseline Time: %.8f seconds\n", time_base);
+
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    multiply_vectorized(A, lenA, B, lenB, C_vec);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_vectorized = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
 
     printf("Vectorized Result = ");
     printBigInt(C_vec, lenA + lenB);
