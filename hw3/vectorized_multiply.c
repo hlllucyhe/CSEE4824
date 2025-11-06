@@ -1,7 +1,8 @@
-﻿#include <stdio.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <immintrin.h>
+#include <time.h>
 
 #define MAX_DIGITS 2048
 #define BASE 10
@@ -71,9 +72,18 @@ int main() {
     int lenA = stringToBigInt(strA, A);
     int lenB = stringToBigInt(strB, B);
 
+    struct timespec start, end;
+    double time_vectorized;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
     multiply_vectorized(A, lenA, B, lenB, C);
-    printf("Result = ");
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    time_vectorized = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+
+    printf("Vectorized Result = ");
     printBigInt(C, lenA + lenB);
+    printf("Vectorized Time: %.6f seconds\n", time_vectorized);
 
     return 0;
 }
