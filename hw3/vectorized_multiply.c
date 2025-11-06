@@ -38,7 +38,8 @@ void multiply_vectorized(uint32_t *A, size_t lenA, uint32_t *B, size_t lenB, uin
 
             // perform multiplication in 8 parallel lanes
             __m256i prod_low = _mm256_mullo_epi32(A_vec, B_vec);
-            __m256i prod_high = _mm256_mulhi_epu32(A_vec, B_vec);
+            __m256i prod_even = _mm256_mul_epu32(A_vec, B_vec);
+            __m256i prod_high = _mm256_srli_epi64(prod_even, 32);
 
             // add carry to the lower part
             __m256i carry_vec = _mm256_set1_epi32((uint32_t)carry);
