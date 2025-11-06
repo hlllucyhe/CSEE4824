@@ -69,8 +69,8 @@ int main() {
     clock_gettime(CLOCK_MONOTONIC, &start);
     multiplyBigInt(A, lenA, B, lenB, C);
     clock_gettime(CLOCK_MONOTONIC, &end);
-    time_spent = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1000000.0;
-    printf("Elapsed time in miliseconds: %f \n", time_spent);
+    time_spent = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    printf("Elapsed time in seconds: %.8f \n", time_spent);
 
     printf("Result = ");
     printBigInt(C, lenA + lenB);

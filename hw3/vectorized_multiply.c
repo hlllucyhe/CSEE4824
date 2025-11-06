@@ -83,7 +83,7 @@ int main() {
 
     printf("Vectorized Result = ");
     printBigInt(C, lenA + lenB);
-    printf("Vectorized Time: %.6f seconds\n", time_vectorized);
+    printf("Vectorized Time: %.8f seconds\n", time_vectorized);
 
     return 0;
 }
