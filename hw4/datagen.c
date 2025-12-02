@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
+#include <string.h>
+// compile with the -lm tag to link the math library
+// gcc -O3 datagen.c -o datagen -lm
 
 // random data generator for integer arrays
 void generate_data(const char* filename, size_t size) {
