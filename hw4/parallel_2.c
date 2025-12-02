@@ -1,48 +1,28 @@
-// cache_optimized.c - 修正版
+// parallel.c - 修改版，支持读取文件
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <omp.h>
 #include <time.h>
-#include <stdint.h>
 
-// Cache line size (typically 64 bytes on modern CPUs)
-#define CACHE_LINE_SIZE 64
+#define THRESHOLD  5000
 
-// L1/L2 cache blocking parameters
-#define L1_BLOCK_SIZE 8192    // ~8KB blocks for L1 cache
-
-// Alignment macro
-#define ALIGN_TO_CACHELINE(x) (((x) + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1))
-
-// Allocate cache-line aligned memory
-int* allocate_aligned(size_t count) {
-    size_t size = count * sizeof(int);
-    size_t aligned_size = ALIGN_TO_CACHELINE(size);
-
-    void* ptr = NULL;
-    if (posix_memalign(&ptr, CACHE_LINE_SIZE, aligned_size) != 0) {
-        fprintf(stderr, "Failed to allocate aligned memory\n");
-        exit(EXIT_FAILURE);
-    }
-    return (int*)ptr;
-}
-
-// Cache-blocked merge function
-void merge_cache_blocked(int* arr, int left, int mid, int right, int* temp) {
+void merge(int* arr, int left, int mid, int right) {
     int n1 = mid - left + 1;
     int n2 = right - mid;
 
-    // Use pre-allocated temporary buffer
-    int* L = temp;
-    int* R = temp + n1;  // 修正：简化偏移计算
+    int* L = (int*)malloc(n1 * sizeof(int));
+    int* R = (int*)malloc(n2 * sizeof(int));
+    if (!L || !R) {
+        fprintf(stderr, "malloc failed in merge\n");
+        exit(1);
+    }
 
-    // Copy data to temporary buffers
-    memcpy(L, &arr[left], n1 * sizeof(int));
-    memcpy(R, &arr[mid + 1], n2 * sizeof(int));
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[left + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[mid + 1 + j];
 
-    // Merge with cache blocking
     int i = 0, j = 0, k = left;
-
     while (i < n1 && j < n2) {
         if (L[i] <= R[j]) {
             arr[k++] = L[i++];
@@ -52,35 +32,46 @@ void merge_cache_blocked(int* arr, int left, int mid, int right, int* temp) {
         }
     }
 
-    // Copy remaining elements
     while (i < n1) {
         arr[k++] = L[i++];
     }
     while (j < n2) {
         arr[k++] = R[j++];
     }
+
+    free(L);
+    free(R);
 }
 
-// Cache-optimized merge sort
-void mergeSort_cache_optimized(int* arr, int left, int right, int* temp) {
+void mergeSort_serial(int* arr, int left, int right) {
     if (left < right) {
         int mid = left + (right - left) / 2;
-
-        mergeSort_cache_optimized(arr, left, mid, temp);
-        mergeSort_cache_optimized(arr, mid + 1, right, temp);
-
-        merge_cache_blocked(arr, left, mid, right, temp);
+        mergeSort_serial(arr, left, mid);
+        mergeSort_serial(arr, mid + 1, right);
+        merge(arr, left, mid, right);
     }
 }
 
-// Wrapper function
-void mergeSort_wrapper(int* arr, int n) {
-    // Allocate temporary buffer (needs to hold n elements)
-    int* temp = allocate_aligned(n);
+void mergeSort_parallel(int* arr, int left, int right) {
+    if (left >= right) return;
 
-    mergeSort_cache_optimized(arr, 0, n - 1, temp);
+    int n = right - left + 1;
 
-    free(temp);
+    if (n <= THRESHOLD) {
+        mergeSort_serial(arr, left, right);
+        return;
+    }
+
+    int mid = left + (right - left) / 2;
+
+#pragma omp task shared(arr)
+    mergeSort_parallel(arr, left, mid);
+
+#pragma omp task shared(arr)
+    mergeSort_parallel(arr, mid + 1, right);
+
+#pragma omp taskwait
+    merge(arr, left, mid, right);
 }
 
 // Load data from binary file
@@ -97,7 +88,11 @@ int* load_data(const char* filename, size_t* size) {
 
     *size = file_size / sizeof(int);
 
-    int* arr = allocate_aligned(*size);
+    int* arr = (int*)malloc(*size * sizeof(int));
+    if (!arr) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        exit(EXIT_FAILURE);
+    }
 
     size_t read_count = fread(arr, sizeof(int), *size, file);
     if (read_count != *size) {
@@ -132,17 +127,22 @@ int main(int argc, char* argv[]) {
     int* arr = load_data(filename, &size);
     printf("Loaded %zu integers\n", size);
 
-    printf("Starting cache-optimized merge sort...\n");
+    printf("Starting parallel merge sort...\n");
     clock_t start = clock();
 
-    mergeSort_wrapper(arr, size);
+#pragma omp parallel
+    {
+#pragma omp single
+        {
+            mergeSort_parallel(arr, 0, size - 1);
+        }
+    }
 
     clock_t end = clock();
     double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
     printf("Sorting completed in %.4f seconds\n", time_spent);
 
-    // Verify correctness
     if (verify_sorted(arr, size)) {
         printf("Verification: Array is correctly sorted!\n");
     }
@@ -150,7 +150,6 @@ int main(int argc, char* argv[]) {
         printf("Verification: ERROR - Array is NOT sorted!\n");
     }
 
-    // Calculate throughput
     double gb_sorted = (size * sizeof(int)) / (1024.0 * 1024.0 * 1024.0);
     double throughput = gb_sorted / time_spent;
     printf("Data size: %.4f GB\n", gb_sorted);
