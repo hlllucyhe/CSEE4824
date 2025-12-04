@@ -1,6 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/resource.h>
+
+// max mem usage
+void print_memory_usage() {
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    printf("Max RSS: %ld kB\n", usage.ru_maxrss);
+}
 
 // timing
 double get_time_ms() {
@@ -104,6 +112,22 @@ int main() {
 
     printf("Sequential DRAM MergeSort Time: %.3f ms\n", end - start);
 
+    print_memory_usage();  
+    
     free(arr);
     return 0;
 }
+
+/*
+ubuntu:
+EveWu@node1:~/CSEE4824/hw4$ ./base
+Baseline MergeSort Time: 1065.033 ms
+EveWu@node1:~/CSEE4824/hw4$ ./seq
+Sequential DRAM MergeSort Time: 744.277 ms
+
+Mac:
+eve@EvedeMacBook-Pro-7 hw4 % ./base
+Baseline MergeSort Time: 603.762 ms
+eve@EvedeMacBook-Pro-7 hw4 % ./seq
+Sequential DRAM MergeSort Time: 430.421 ms
+*/

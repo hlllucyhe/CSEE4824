@@ -1,6 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/resource.h>
+
+// max mem usage
+void print_memory_usage() {
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    printf("Max RSS: %ld kB\n", usage.ru_maxrss);
+}
 
 // Timing
 double get_time_ms() {
@@ -66,6 +74,8 @@ int main() {
     double end = get_time_ms();
 
     printf("Baseline MergeSort Time: %.3f ms\n", end - start);
+
+    print_memory_usage();  
 
     free(arr);
     return 0;
