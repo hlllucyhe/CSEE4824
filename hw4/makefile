@@ -73,15 +73,12 @@ run_all:
 	for c in $$combos; do \
 		set -- $$c; \
 		A=$$1; B=$$2; C=$$3; D=$$4; NAME=$$5; \
-		\
 		echo "===================================================="; \
-		echo " Running combination: $$NAME (A=$$A B=$$B C=$$C D=$$D)"; \
+		echo "Running: $$NAME  (A=$$A B=$$B C=$$C D=$$D)"; \
 		\
-		# compile with flags \
 		$(CC) $(CFLAGS) -DUSE_PARALLEL=$$A -DUSE_CACHE_BLOCK=$$B -DUSE_SEQ_DRAM=$$C -DUSE_BASELINE=$$D \
 		    -o $(TARGET) $(SRC); \
 		\
-		# run program and capture output lines containing Time / Memory \
 		OUTPUT=$$(./$(TARGET) $(FILE) | tee /dev/tty); \
 		TIME=$$(echo "$$OUTPUT" | grep "Time:" | awk '{print $$2}'); \
 		MEM=$$(echo "$$OUTPUT" | grep "Memory" | awk '{print $$4}'); \
@@ -90,11 +87,10 @@ run_all:
 	done; \
 	\
 	echo "===================================================="; \
-	echo " All results saved into results.csv";
-	
+	echo "Results saved to results.csv";
 
 # ------------------------------------------------------
 # Clean
 # ------------------------------------------------------
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) results.csv
