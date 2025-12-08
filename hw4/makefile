@@ -60,14 +60,14 @@ run_all:
 	echo "Name,A,B,C,D,Time_sec,Memory_MB" > results.csv; \
 	\
 	combos=" \
-	0 0 0 1 baseline \
-	1 0 0 0 parallel \
-	0 1 0 0 cacheblock \
-	0 0 1 0 seqdram \
-	1 1 0 0 ab \
-	1 0 1 0 ac \
-	0 1 1 0 bc \
-	1 1 1 0 abc \
+	'0 0 0 1 baseline' \
+	'1 0 0 0 parallel' \
+	'0 1 0 0 cacheblock' \
+	'0 0 1 0 seqdram' \
+	'1 1 0 0 ab' \
+	'1 0 1 0 ac' \
+	'0 1 1 0 bc' \
+	'1 1 1 0 abc' \
 	"; \
 	\
 	for c in $$combos; do \
