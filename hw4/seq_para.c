@@ -7,7 +7,8 @@
 #include <omp.h>
 
 // --------- CONFIG ----------
-#define OMP_THRESHOLD (1 << 10)  
+// Threshold in *elements per merged run* (2*width) above which we parallelize
+#define OMP_THRESHOLD 50000  
 
 // --------- Peak RSS ----------
 void print_memory_usage(void) {
@@ -91,8 +92,8 @@ void mergeSort_seq_dram_parallel(int *arr, size_t n) {
 
     for (size_t width = 1; width < n; width *= 2) {
 
-        // big run parallel，small run serially（avoid thread overhead）
-        if (2 * width <= OMP_THRESHOLD) {
+        // big runs (2*width > threshold) parallel, small runs serial
+        if (2 * width >= OMP_THRESHOLD) {
 
 #pragma omp parallel for schedule(static)
             for (size_t left = 0; left < n; left += 2 * width) {
@@ -103,7 +104,7 @@ void mergeSort_seq_dram_parallel(int *arr, size_t n) {
                 if (right >= n) right = n - 1;
 
                 if (mid < right)
-                    merge_runs(src, dst, left, mid, right);
+                    merge_runs(src, dst, (int)left, (int)mid, (int)right);
                 else {
                     for (size_t i = left; i <= right; i++)
                         dst[i] = src[i];
@@ -121,7 +122,7 @@ void mergeSort_seq_dram_parallel(int *arr, size_t n) {
                 if (right >= n) right = n - 1;
 
                 if (mid < right)
-                    merge_runs(src, dst, left, mid, right);
+                    merge_runs(src, dst, (int)left, (int)mid, (int)right);
                 else {
                     for (size_t i = left; i <= right; i++)
                         dst[i] = src[i];
