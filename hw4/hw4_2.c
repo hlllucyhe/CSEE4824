@@ -7,7 +7,7 @@
 #include <omp.h>
 #include <sys/resource.h>
 
-#define THRESHOLD            5000      // threshold for switching to serial sort
+#define THRESHOLD            50000      // threshold for switching to serial sort
 #define CACHE_LINE_SIZE      64
 #define TILE_ELEMS           2048       // tile size for cache blocking
 #define INSERTION_THRESHOLD  32         // use insertion sort for small segments
