@@ -92,7 +92,7 @@ void mergeSort_seq_dram_parallel(int *arr, size_t n) {
     for (size_t width = 1; width < n; width *= 2) {
 
         // big run parallel，small run serially（avoid thread overhead）
-        if (2 * width >= OMP_THRESHOLD) {
+        if (2 * width <= OMP_THRESHOLD) {
 
 #pragma omp parallel for schedule(static)
             for (size_t left = 0; left < n; left += 2 * width) {
@@ -159,11 +159,7 @@ int main(int argc, char *argv[]) {
 
     double start = omp_get_wtime();
 
-#pragma omp parallel
-    {
-#pragma omp single
-        mergeSort_seq_dram_parallel(arr, n);
-    }
+    mergeSort_seq_dram_parallel(arr, n);
 
     double end = omp_get_wtime();
     double duration = end - start;

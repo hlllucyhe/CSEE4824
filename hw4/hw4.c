@@ -8,13 +8,12 @@
 #include <sys/resource.h>
 #include <omp.h>
 
-// CONFIG 
-#define OMP_THRESHOLD   (1 << 10)
+// --------- CONFIG ----------
+#define OMP_THRESHOLD   (1 << 18)   // tune: run size (elements) below which we parallelize
 #define CACHE_LINE_SIZE 64
 #define TILE_ELEMS      2048
-#define MIN(a,b) (( (a) < (b) ) ? (a) : (b))
 
-// Utility 
+// --------- Utility ----------
 static int32_t* allocate_aligned(size_t count) {
     void* ptr = NULL;
     if (posix_memalign(&ptr, CACHE_LINE_SIZE, count * sizeof(int32_t)) != 0) {
@@ -37,7 +36,7 @@ int verify_sorted(const int32_t *arr, size_t n) {
     return 1;
 }
 
-// File Loader 
+// --------- File Loader ----------
 int32_t *load_data(const char *filename, size_t *size) {
     FILE *file = fopen(filename, "rb");
     if (!file) { perror("open"); exit(1); }
@@ -46,7 +45,7 @@ int32_t *load_data(const char *filename, size_t *size) {
     long bytes = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    *size = bytes / sizeof(int32_t);
+    *size = (size_t)(bytes / (long)sizeof(int32_t));
 
     int32_t *arr = allocate_aligned(*size);
 
@@ -60,19 +59,19 @@ int32_t *load_data(const char *filename, size_t *size) {
     return arr;
 }
 
-// Tiled Merge 
+// --------- Tiled Merge ----------
 static void merge_runs_tiled(const int32_t* src, int32_t* dst,
-                             int left, int mid, int right)
+                             size_t left, size_t mid, size_t right)
 {
     int32_t bufL[TILE_ELEMS];
     int32_t bufR[TILE_ELEMS];
 
-    int i_src = left;
-    int j_src = mid + 1;
+    size_t i_src = left;
+    size_t j_src = mid + 1;
 
-    int lenL = 0, lenR = 0;
-    int i = 0, j = 0;
-    int k = left;
+    size_t lenL = 0, lenR = 0;
+    size_t i = 0, j = 0;
+    size_t k = left;
 
 #define REFILL_L() do { \
     if (i_src > mid) lenL = 0; \
@@ -125,43 +124,42 @@ static void merge_runs_tiled(const int32_t* src, int32_t* dst,
 #undef REFILL_R
 }
 
-// Bottom-up + Parallel + Tiled 
+// --------- Bottom-up + Parallel + Tiled ----------
 void mergeSort_seq_dram_parallel(int32_t *arr, size_t n) {
     int32_t *tmp = allocate_aligned(n);
     int32_t *src = arr;
     int32_t *dst = tmp;
 
     for (size_t width = 1; width < n; width *= 2) {
-        if (2 * width >= OMP_THRESHOLD) {
+        size_t run_size = 2 * width;
 
+        if (run_size <= OMP_THRESHOLD) {
+            // Many small/medium merges → good parallelism
 #pragma omp parallel for schedule(static)
-            for (size_t left = 0; left < n; left += 2 * width) {
-
-                size_t mid = left + width - 1;
-                size_t right = left + 2 * width - 1;
+            for (size_t left = 0; left < n; left += run_size) {
+                size_t mid   = left + width - 1;
+                size_t right = left + run_size - 1;
 
                 if (mid >= n)   mid = n - 1;
                 if (right >= n) right = n - 1;
 
                 if (mid < right)
-                    merge_runs_tiled(src, dst, (int)left, (int)mid, (int)right);
+                    merge_runs_tiled(src, dst, left, mid, right);
                 else
                     for (size_t i = left; i <= right; i++)
                         dst[i] = src[i];
             }
-
         } else {
-
-            for (size_t left = 0; left < n; left += 2 * width) {
-
-                size_t mid = left + width - 1;
-                size_t right = left + 2 * width - 1;
+            // Very large runs → few merges → parallelism not worth it
+            for (size_t left = 0; left < n; left += run_size) {
+                size_t mid   = left + width - 1;
+                size_t right = left + run_size - 1;
 
                 if (mid >= n)   mid = n - 1;
                 if (right >= n) right = n - 1;
 
                 if (mid < right)
-                    merge_runs_tiled(src, dst, (int)left, (int)mid, (int)right);
+                    merge_runs_tiled(src, dst, left, mid, right);
                 else
                     for (size_t i = left; i <= right; i++)
                         dst[i] = src[i];
@@ -182,22 +180,23 @@ void mergeSort_seq_dram_parallel(int32_t *arr, size_t n) {
     free(tmp);
 }
 
-// sort_array
 void sort_array(int32_t *arr, size_t size) {
     mergeSort_seq_dram_parallel(arr, size);
 }
 
-// main 
-int main() {
-
+// --------- main ----------
+int main(void) {
     char filename[256];
     printf("Enter input file name: ");
-    scanf("%255s", filename);
+    if (scanf("%255s", filename) != 1) {
+        fprintf(stderr, "Failed to read filename\n");
+        return 1;
+    }
 
     size_t size;
     int32_t *input_arr = load_data(filename, &size);
 
-    int32_t *sorted_arr = malloc(size * sizeof(int32_t));
+    int32_t *sorted_arr = allocate_aligned(size);
     memcpy(sorted_arr, input_arr, size * sizeof(int32_t));
 
     double t0 = omp_get_wtime();
