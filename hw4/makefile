@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -O3 -fopenmp
 
-# All source files
+# List of all source files
 SRCS = baseline_3.c \
        cache_optimized_4.c \
        parallel_3.c \
@@ -11,22 +11,21 @@ SRCS = baseline_3.c \
        seq_para.c \
        hw4.c
 
-# Generate executable names from src
+# Executables
 EXES = $(SRCS:.c=.out)
 
-# ------------------------
-# Default: build everything
-# ------------------------
+# ------------------------------------------------------
+# Build all executables
+# ------------------------------------------------------
 all: $(EXES)
 
-# Pattern rule: build X.c → X.out
 %.out: %.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-# --------------------------------
-# Run one file:
-#    make run SRC=baseline_3.c FILE=data.bin
-# --------------------------------
+# ------------------------------------------------------
+# Run one manually:
+#   make run SRC=seq_dram.c FILE=data.bin
+# ------------------------------------------------------
 run:
 	@if [ -z "$(SRC)" ] || [ -z "$(FILE)" ]; then \
 		echo "Usage: make run SRC=xxx.c FILE=data.bin"; exit 1; \
@@ -34,8 +33,34 @@ run:
 	$(CC) $(CFLAGS) -o run_exec $(SRC)
 	./run_exec $(FILE)
 
-# --------------------------------
+# ------------------------------------------------------
+# Auto test all .out executables and generate results.csv
+# Usage:
+#   make test FILE=data.bin
+# ------------------------------------------------------
+test:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Usage: make test FILE=data.bin"; exit 1; \
+	fi; \
+	\
+	echo "name,time_ms,memory_mb" > results.csv; \
+	\
+	for exe in $(EXES); do \
+		echo "======================================="; \
+		echo "Running $$exe ..."; \
+		OUTPUT=$$(./$$exe $(FILE) | tee /dev/tty); \
+		TIME=$$(echo "$$OUTPUT" | grep -i "Time" | awk '{print $$NF}'); \
+		MEM=$$(echo "$$OUTPUT"  | grep -i "RSS"  | awk '{print $NF}'); \
+		NAME=$${exe%.out}; \
+		\
+		echo "$$NAME,$$TIME,$$MEM" >> results.csv; \
+	done; \
+	\
+	echo "======================================="; \
+	echo "Results saved into results.csv";
+
+# ------------------------------------------------------
 # Clean
-# --------------------------------
+# ------------------------------------------------------
 clean:
-	rm -f *.out run_exec
+	rm -f *.out run_exec results.csv
