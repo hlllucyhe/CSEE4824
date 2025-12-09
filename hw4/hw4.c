@@ -9,7 +9,7 @@
 #include <omp.h>
 
 // --------- CONFIG ----------
-#define OMP_THRESHOLD   (1 << 18)   // tune: run size (elements) below which we parallelize
+#define OMP_THRESHOLD   (1 << 18)
 #define CACHE_LINE_SIZE 64
 #define TILE_ELEMS      2048
 
@@ -30,9 +30,8 @@ void print_memory_usage(void) {
 }
 
 int verify_sorted(const int32_t *arr, size_t n) {
-    for (size_t i = 1; i < n; i++) {
+    for (size_t i = 1; i < n; i++)
         if (arr[i] < arr[i - 1]) return 0;
-    }
     return 1;
 }
 
@@ -134,7 +133,7 @@ void mergeSort_seq_dram_parallel(int32_t *arr, size_t n) {
         size_t run_size = 2 * width;
 
         if (run_size <= OMP_THRESHOLD) {
-            // Many small/medium merges → good parallelism
+
 #pragma omp parallel for schedule(static)
             for (size_t left = 0; left < n; left += run_size) {
                 size_t mid   = left + width - 1;
@@ -150,7 +149,7 @@ void mergeSort_seq_dram_parallel(int32_t *arr, size_t n) {
                         dst[i] = src[i];
             }
         } else {
-            // Very large runs → few merges → parallelism not worth it
+
             for (size_t left = 0; left < n; left += run_size) {
                 size_t mid   = left + width - 1;
                 size_t right = left + run_size - 1;
@@ -184,14 +183,15 @@ void sort_array(int32_t *arr, size_t size) {
     mergeSort_seq_dram_parallel(arr, size);
 }
 
-// --------- main ----------
-int main(void) {
-    char filename[256];
-    printf("Enter input file name: ");
-    if (scanf("%255s", filename) != 1) {
-        fprintf(stderr, "Failed to read filename\n");
+// main 
+int main(int argc, char *argv[]) {
+
+    if (argc < 2) {
+        printf("Usage: %s <input_binary_file>\n", argv[0]);
         return 1;
     }
+
+    const char *filename = argv[1];
 
     size_t size;
     int32_t *input_arr = load_data(filename, &size);
